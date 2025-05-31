@@ -6,36 +6,36 @@
 
 * Tela Inicial:
 
-* * - Exibe uma lista de medicamentos.
+ - Exibe uma lista de medicamentos.
 
-* * - Possui um campo de busca .
+- Possui um campo de busca .
 
 * Detalhes do Medicamento:
 
-* * - Ao clicar em um medicamento, visualize informações detalhadas.
+- Ao clicar em um medicamento, visualize informações detalhadas.
 
-* * - Adicionar aos favoritos.
+ - Adicionar aos favoritos.
 
-* * - Áudios explicativos.
+- Áudios explicativos.
 
 * Medicamentos Similares:
 
-* * - Veja sugestões de outros medicamentos relacionados na tela de detalhes.
+ - Veja sugestões de outros medicamentos relacionados na tela de detalhes.
 
 * Favoritos:
 
-* * - Gerencie sua lista de medicamentos favoritos.
+ - Gerencie sua lista de medicamentos favoritos.
 
-* * - Permite adicionar ou remover itens .
+ - Permite adicionar ou remover itens .
 
 * Configurações:
 
-* * - Opções como Modo Escuro .
+ - Opções como Modo Escuro .
 
-* * - Ações para limpar dados.
+ - Ações para limpar dados.
 
 * Ajuda e Suporte:
 
-* * - Acesse uma seção de Perguntas Frequentes (FAQs).
+ - Acesse uma seção de Perguntas Frequentes (FAQs).
 
-* * - Botão para simular o envio de mensagens de suporte.
+ - Botão para simular o envio de mensagens de suporte.
