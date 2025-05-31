@@ -28,8 +28,6 @@ data class FAQItem(
     val question: String,
     val answer: String
 )
-
-// Lista de FAQs de exemplo
 fun getSampleFAQs(): List<FAQItem> {
     return listOf(
         FAQItem(
@@ -102,7 +100,6 @@ fun TelaAjudaSuporte(
             }
         }
 
-        // Botão para Enviar Mensagem para Suporte
         Button(
             onClick = {
                 Toast.makeText(context, "TOC TOC " +

@@ -94,7 +94,6 @@ fun TelaConfiguracoes(
             }
         }
 
-        // Seção de Ações (Botões)
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

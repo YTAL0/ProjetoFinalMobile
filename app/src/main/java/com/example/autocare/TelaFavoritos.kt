@@ -102,8 +102,6 @@ fun FavoriteMedicamentoCard(
                     Text(text = medicamento.dosagem, fontSize = 14.sp, color = Color.Gray)
                 }
             }
-
-            // Botão de Remover
             IconButton(
                 onClick = {
                     onRemoveClick(medicamento)
