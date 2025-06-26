@@ -39,3 +39,12 @@
 * * Acesse uma seção de Perguntas Frequentes (FAQs).
 
 * * Botão para simular o envio de mensagens de suporte.
+
+# Entrega 3
+
+* Novas funcionalidades
+
+* * Editar medicamentos (Ainda sem persistência de dados)
+* * Exluir medicamentos (Ainda sem persistência de dados)
+* * Criar medicamentos (Ainda sem persistência de dados)
+* * Agora o aplicativo notifica na hora de tomar os medicamentos.

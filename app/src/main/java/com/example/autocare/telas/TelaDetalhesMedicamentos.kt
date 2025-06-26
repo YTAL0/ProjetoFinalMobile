@@ -1,6 +1,7 @@
-package com.example.autocare
+package com.example.autocare.com.example.autocare.telas
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -29,6 +31,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextAlign
+import com.example.autocare.Frequencia
+import com.example.autocare.Medicamento
+import com.example.autocare.R
+import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.getSampleMedicamentos
+import com.example.autocare.ui.theme.AutoCareTheme
 
 @Composable
 fun TelaDetalhesMedicamento(
@@ -48,11 +60,28 @@ fun TelaDetalhesMedicamento(
     var isPlaying by remember { mutableStateOf(false) }
 
     DisposableEffect(medicamento.id) {
-        if (medicamento.audioResId != null) {
-            mediaPlayer = MediaPlayer.create(context, medicamento.audioResId)
-            mediaPlayer?.setOnCompletionListener {
-                isPlaying = false
+        mediaPlayer?.release()
+        mediaPlayer = null
+        isPlaying = false
+
+        if (!medicamento.audioUrl.isNullOrBlank()) {
+            mediaPlayer = try {
+                MediaPlayer.create(context, Uri.parse(medicamento.audioUrl))
+            } catch (e: Exception) {
+                Toast.makeText(context, "Erro ao carregar áudio da URL: ${e.message}", Toast.LENGTH_LONG).show()
+                null
             }
+        } else if (medicamento.audioResId != null && medicamento.audioResId != 0) {
+            mediaPlayer = try {
+                MediaPlayer.create(context, medicamento.audioResId)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Erro ao carregar áudio do recurso: ${e.message}", Toast.LENGTH_LONG).show()
+                null
+            }
+        }
+
+        mediaPlayer?.setOnCompletionListener {
+            isPlaying = false
         }
 
         onDispose {
@@ -70,14 +99,38 @@ fun TelaDetalhesMedicamento(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = medicamento.imageResId),
-            contentDescription = "Imagem de ${medicamento.nome}",
-            modifier = Modifier
-                .size(200.dp)
-                .padding(bottom = 16.dp),
-            contentScale = ContentScale.Fit
-        )
+        if (!medicamento.imageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = Uri.parse(medicamento.imageUrl),
+                contentDescription = "Imagem de ${medicamento.nome}",
+                modifier = Modifier
+                    .size(200.dp)
+                    .padding(bottom = 16.dp),
+                contentScale = ContentScale.Fit,
+                error = painterResource(id = R.drawable.ic_launcher_foreground),
+                placeholder = painterResource(id = R.drawable.ic_launcher_foreground)
+            )
+        } else if (medicamento.imageResId != 0) {
+            Image(
+                painter = painterResource(id = medicamento.imageResId),
+                contentDescription = "Imagem de ${medicamento.nome}",
+                modifier = Modifier
+                    .size(200.dp)
+                    .padding(bottom = 16.dp),
+                contentScale = ContentScale.Fit
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(200.dp)
+                    .padding(bottom = 16.dp)
+                    .background(Color.LightGray, shape = MaterialTheme.shapes.medium),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Sem Imagem", color = Color.DarkGray)
+            }
+        }
+
 
         Text(
             text = medicamento.nome,
@@ -106,7 +159,8 @@ fun TelaDetalhesMedicamento(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(text = "Frequência:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(text = medicamento.frequencia, fontSize = 16.sp)
+                Text(text = "${medicamento.frequencia.intervaloHoras} em ${medicamento.frequencia.intervaloHoras} horas", fontSize = 16.sp)
+                Text(text = "Primeira: ${medicamento.frequencia.primeiraHora}", fontSize = 14.sp, color = Color.Gray)
             }
         }
 
@@ -117,7 +171,7 @@ fun TelaDetalhesMedicamento(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            FilledTonalButton(
+            Button(
                 onClick = {
                     if (isFavorite) {
                         medicamentoViewModel.removeFavorite(medicamento)
@@ -138,7 +192,7 @@ fun TelaDetalhesMedicamento(
 
             Button(
                 onClick = {
-                    if (medicamento.audioResId != null) {
+                    if (medicamento.audioUrl != null || medicamento.audioResId != null) {
                         mediaPlayer?.let { player ->
                             if (player.isPlaying) {
                                 player.pause()
@@ -149,13 +203,13 @@ fun TelaDetalhesMedicamento(
                                 isPlaying = true
                                 Toast.makeText(context, "Reproduzindo áudio de ${medicamento.nome}.", Toast.LENGTH_SHORT).show()
                             }
-                        } ?: Toast.makeText(context, "Erro ao carregar áudio. Tente novamente.", Toast.LENGTH_SHORT).show()
+                        } ?: Toast.makeText(context, "Erro ao carregar áudio. Tente novamente ou verifique o arquivo.", Toast.LENGTH_LONG).show()
                     } else {
                         Toast.makeText(context, "Nenhum áudio disponível para ${medicamento.nome}.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                enabled = medicamento.audioResId != null
+                enabled = (medicamento.audioUrl != null || medicamento.audioResId != null)
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -166,13 +220,26 @@ fun TelaDetalhesMedicamento(
             }
         }
 
+        Button(
+            onClick = { navController.navigate("edit_medicamento_route/${medicamento.id}") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Icon(Icons.Default.Edit, contentDescription = "Editar Medicamento")
+            Spacer(Modifier.width(8.dp))
+            Text("Editar Medicamento")
+        }
+
+
         Text(
             text = "Outros Medicamentos Similares",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(top = 24.dp, bottom = 16.dp)
         )
 
         LazyRow(
@@ -214,12 +281,32 @@ fun RelatedMedicamentoItem(medicamento: Medicamento, onItemClick: (String) -> Un
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = medicamento.imageResId),
-                contentDescription = "Imagem de ${medicamento.nome}",
-                modifier = Modifier.size(80.dp),
-                contentScale = ContentScale.Fit
-            )
+            if (!medicamento.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = Uri.parse(medicamento.imageUrl),
+                    contentDescription = "Imagem de ${medicamento.nome}",
+                    modifier = Modifier.size(80.dp),
+                    contentScale = ContentScale.Fit,
+                    error = painterResource(id = R.drawable.ic_launcher_foreground),
+                    placeholder = painterResource(id = R.drawable.ic_launcher_foreground)
+                )
+            } else if (medicamento.imageResId != 0) {
+                Image(
+                    painter = painterResource(id = medicamento.imageResId),
+                    contentDescription = "Imagem de ${medicamento.nome}",
+                    modifier = Modifier.size(80.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color.LightGray, shape = MaterialTheme.shapes.small),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Sem Imagem", fontSize = 10.sp, textAlign = TextAlign.Center)
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = medicamento.nome,
@@ -239,23 +326,26 @@ fun RelatedMedicamentoItem(medicamento: Medicamento, onItemClick: (String) -> Un
     }
 }
 
+
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 fun TelaDetalhesMedicamentoPreview() {
-    com.example.autocare.ui.theme.AutoCareTheme {
+    AutoCareTheme {
         TelaDetalhesMedicamento(
             medicamento = Medicamento(
                 id = "prev_detail",
                 nome = "Ibuprofeno 400mg",
                 descricaoCurta = "Analgésico e anti-inflamatório, ideal para dores leves a moderadas e febre. Não usar em caso de úlcera gástrica.",
                 imageResId = R.drawable.paracetamol,
+                audioResId = R.raw.paracetamol,
                 dosagem = "400mg",
-                frequencia = "6 em 6 horas",
-                audioResId = R.raw.paracetamol
+                frequencia = Frequencia(6, "08:00"),
+                imageUrl = null,
+                audioUrl = null
             ),
             navController = rememberNavController(),
-            medicamentoViewModel = MedicamentoViewModel()
+            medicamentoViewModel = MedicamentoViewModel(LocalContext.current.applicationContext as Application)
         )
     }
 }

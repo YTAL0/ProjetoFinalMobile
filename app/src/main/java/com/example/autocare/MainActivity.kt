@@ -1,58 +1,34 @@
 package com.example.autocare
 
-
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Application
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,7 +48,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil.compose.AsyncImage
+import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.com.example.autocare.telas.TelaDetalhesMedicamento
 import com.example.autocare.ui.theme.AutoCareTheme
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +79,21 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
     val context = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Permissão de notificações concedida!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Permissão de notificações negada.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     Scaffold(
         snackbarHost = { SnackbarHost(remember { SnackbarHostState() }) },
         topBar = {
@@ -129,12 +124,33 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
                         title = "Ajuda e Suporte",
                         onBackClick = { navController.popBackStack() }
                     )
+                } else if (currentRoute == "add_medicamento_route") {
+                    DetailsTopAppBar(
+                        title = "Adicionar Medicamento",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                } else if (currentRoute?.startsWith("edit_medicamento_route") == true) {
+                    DetailsTopAppBar(
+                        title = "Editar Medicamento",
+                        onBackClick = { navController.popBackStack() }
+                    )
                 }
             }
         },
         bottomBar = {
             if (currentRoute == "home") {
                 MedicineBottomNavigation(navController)
+            }
+        },
+        floatingActionButton = {
+            if (currentRoute == "home") {
+                FloatingActionButton(
+                    onClick = { navController.navigate("add_medicamento_route") },
+                    shape = CircleShape,
+                    containerColor = Color(0xFFFF5555)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Medicamento")
+                }
             }
         }
     ) { paddingValues ->
@@ -145,9 +161,13 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
         ) {
             composable("home") {
                 TelaInicial(
-                    medicamentos = getSampleMedicamentos(),
+                    medicamentos = medicamentoViewModel.medicamentos,
                     onMedicamentoClick = { medicamentoId ->
                         navController.navigate("details/$medicamentoId")
+                    },
+                    // A chamada aqui já está correta!
+                    onRemoveMedicamentoClick = { medicamentoId ->
+                        medicamentoViewModel.removeMedicamento(medicamentoId)
                     }
                 )
             }
@@ -156,7 +176,7 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
                 arguments = listOf(navArgument("medicamentoId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val medicamentoId = backStackEntry.arguments?.getString("medicamentoId")
-                val medicamento = getSampleMedicamentos().find { it.id == medicamentoId }
+                val medicamento = medicamentoViewModel.medicamentos.find { it.id == medicamentoId }
                 if (medicamento != null) {
                     TelaDetalhesMedicamento(
                         medicamento = medicamento,
@@ -185,9 +205,35 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
             composable("help_route") {
                 TelaAjudaSuporte()
             }
+            composable("add_medicamento_route") {
+                TelaAdicionarMedicamento(
+                    medicamentoViewModel = medicamentoViewModel,
+                    onMedicamentoAdded = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "edit_medicamento_route/{medicamentoId}",
+                arguments = listOf(navArgument("medicamentoId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val medicamentoId = backStackEntry.arguments?.getString("medicamentoId")
+                if (medicamentoId != null) {
+                    TelaEditarMedicamento(
+                        medicamentoId = medicamentoId,
+                        medicamentoViewModel = medicamentoViewModel,
+                        onMedicamentoUpdated = { navController.popBackStack() }
+                    )
+                } else {
+                    Text(
+                        "ID do medicamento para edição não encontrado!",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.Center)
+                    )
+                }
+            }
 
             composable("calendar_route") { Text("Tela de Calendário", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
-            composable("reminders_route") { Text("Tela de Lembretes", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
+            composable("reminders_route") { Text("Tela de Receitas", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
             composable("profile_route") { Text("Tela de Perfil", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
         }
     }
@@ -250,8 +296,8 @@ fun MedicineBottomNavigation(navController: NavController) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar {
-        val items = listOf("Início", "Calendário", "Lembretes", "Perfil")
-        val icons = listOf(Icons.Default.Home, Icons.Default.CalendarToday, Icons.Default.AddAlert, Icons.Default.Help)
+        val items = listOf("Início", "Calendário", "Receitas", "Perfil")
+        val icons = listOf(Icons.Default.Home, Icons.Default.CalendarToday, Icons.Default.AssignmentTurnedIn, Icons.Default.Help)
         val routes = listOf("home", "calendar_route", "reminders_route", "profile_route")
 
         items.forEachIndexed { index, item ->
@@ -279,7 +325,8 @@ fun MedicineBottomNavigation(navController: NavController) {
 fun TelaInicial(
     modifier: Modifier = Modifier,
     medicamentos: List<Medicamento>,
-    onMedicamentoClick: (String) -> Unit
+    onMedicamentoClick: (String) -> Unit,
+    onRemoveMedicamentoClick: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -322,11 +369,24 @@ fun TelaInicial(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else {
+            } else if (filteredMedicamentos.isEmpty() && searchQuery.isBlank()) {
+                item {
+                    Text(
+                        text = "Nenhum medicamento adicionado ainda. Clique no '+' para adicionar um!",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            else {
                 items(filteredMedicamentos) { medicamento ->
                     MedicamentoCard(
                         medicamento = medicamento,
-                        onClick = { onMedicamentoClick(medicamento.id) }
+                        onClick = { onMedicamentoClick(medicamento.id) },
+                        onDeleteClick = { onRemoveMedicamentoClick(medicamento.id) }
                     )
                 }
             }
@@ -334,11 +394,11 @@ fun TelaInicial(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicamentoCard(medicamento: Medicamento, onClick: () -> Unit) {
+fun MedicamentoCard(medicamento: Medicamento, onClick: () -> Unit, onDeleteClick: (String) -> Unit) {
     val context = LocalContext.current
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -353,14 +413,37 @@ fun MedicamentoCard(medicamento: Medicamento, onClick: () -> Unit) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = medicamento.imageResId),
-                contentDescription = "Imagem de ${medicamento.nome}",
-                modifier = Modifier
-                    .size(80.dp)
-                    .padding(end = 16.dp),
-                contentScale = ContentScale.Crop
-            )
+            if (!medicamento.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = Uri.parse(medicamento.imageUrl),
+                    contentDescription = "Imagem de ${medicamento.nome}",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(end = 16.dp),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(id = R.drawable.ic_launcher_foreground),
+                    placeholder = painterResource(id = R.drawable.ic_launcher_foreground)
+                )
+            } else if (medicamento.imageResId != 0) {
+                Image(
+                    painter = painterResource(id = medicamento.imageResId),
+                    contentDescription = "Imagem de ${medicamento.nome}",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(end = 16.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(end = 16.dp)
+                        .background(Color.LightGray, shape = MaterialTheme.shapes.small),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Sem Imagem", fontSize = 10.sp, textAlign = TextAlign.Center)
+                }
+            }
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -368,10 +451,42 @@ fun MedicamentoCard(medicamento: Medicamento, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = medicamento.descricaoCurta, fontSize = 14.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Dosagem: ${medicamento.dosagem}", fontSize = 12.sp, color = Color.DarkGray)
-                Text(text = "Frequência: ${medicamento.frequencia}", fontSize = 12.sp, color = Color.DarkGray)
+                Text(text = "Frequência: ${medicamento.frequencia.intervaloHoras}h, Início: ${medicamento.frequencia.primeiraHora}", fontSize = 12.sp, color = Color.DarkGray)
+            }
+
+            IconButton(onClick = { showDeleteDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Excluir medicamento",
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar Exclusão") },
+            text = { Text("Tem certeza que deseja excluir '${medicamento.nome}' da sua lista de medicamentos?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteClick(medicamento.id)
+                        showDeleteDialog = false
+                        Toast.makeText(context, "'${medicamento.nome}' excluído.", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
@@ -380,10 +495,9 @@ fun MedicamentoCard(medicamento: Medicamento, onClick: () -> Unit) {
 @Composable
 fun DefaultPreview() {
     AutoCareTheme {
-        AppNavigation(medicamentoViewModel = MedicamentoViewModel())
+        AppNavigation(medicamentoViewModel = MedicamentoViewModel(LocalContext.current.applicationContext as Application))
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun MedicamentoCardPreview() {
@@ -393,11 +507,12 @@ fun MedicamentoCardPreview() {
                 id = "prev_001",
                 nome = "Vitamina C",
                 descricaoCurta = "Suplemento para imunidade.",
-                imageResId = R.drawable.sivastatina,
+                imageResId = R.drawable.paracetamol,
                 dosagem = "1000mg",
-                frequencia = "1 vez ao dia"
+                frequencia = Frequencia(24, "09:00")
             ),
-            onClick = {}
+            onClick = {},
+            onDeleteClick = {}
         )
     }
 }

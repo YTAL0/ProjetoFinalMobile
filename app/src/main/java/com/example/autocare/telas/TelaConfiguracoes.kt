@@ -1,6 +1,7 @@
 package com.example.autocare
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
 import com.example.autocare.ui.theme.AutoCareTheme
 
 @Composable
@@ -69,8 +71,7 @@ fun TelaConfiguracoes(
                         }
                     )
                 }
-                Divider(modifier = Modifier.padding(vertical = 8.dp)) // Separador
-
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -138,6 +139,6 @@ fun TelaConfiguracoes(
 @Composable
 fun TelaConfiguracoesPreview() {
     AutoCareTheme {
-        TelaConfiguracoes(medicamentoViewModel = MedicamentoViewModel())
+        TelaConfiguracoes(medicamentoViewModel = MedicamentoViewModel(LocalContext.current.applicationContext as Application))
     }
 }
