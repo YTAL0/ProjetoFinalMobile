@@ -1,4 +1,4 @@
-package com.example.autocare
+package com.example.autocare.telas
 
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize

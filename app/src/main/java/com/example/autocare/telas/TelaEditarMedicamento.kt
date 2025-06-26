@@ -1,4 +1,4 @@
-package com.example.autocare
+package com.example.autocare.telas
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -52,7 +52,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.medicamento.Frequencia
+import com.example.autocare.medicamento.Medicamento
+import com.example.autocare.medicamento.MedicamentoViewModel
 import com.example.autocare.ui.theme.AutoCareTheme
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

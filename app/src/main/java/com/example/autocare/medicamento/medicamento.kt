@@ -1,4 +1,6 @@
-package com.example.autocare
+package com.example.autocare.medicamento
+
+import com.example.autocare.R
 
 data class Frequencia(
     val intervaloHoras: Int,

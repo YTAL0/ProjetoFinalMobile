@@ -45,7 +45,7 @@ android {
 
 
 dependencies {
-
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

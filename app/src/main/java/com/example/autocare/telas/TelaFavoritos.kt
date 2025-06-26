@@ -1,4 +1,4 @@
-package com.example.autocare
+package com.example.autocare.telas
 
 import android.net.Uri
 import android.widget.Toast
@@ -23,6 +23,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.autocare.R
+import com.example.autocare.medicamento.Frequencia
+import com.example.autocare.medicamento.Medicamento
 import com.example.autocare.ui.theme.AutoCareTheme
 
 @Composable

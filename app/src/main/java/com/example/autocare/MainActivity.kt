@@ -49,18 +49,28 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
-import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
-import com.example.autocare.com.example.autocare.telas.TelaDetalhesMedicamento
+import com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.telas.TelaDetalhesMedicamento
 import com.example.autocare.ui.theme.AutoCareTheme
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import com.example.autocare.medicamento.Frequencia
+import com.example.autocare.medicamento.Medicamento
+import com.example.autocare.receitas.telas.TelaDetalhesReceita
+import com.example.autocare.telas.TelaAdicionarMedicamento
+import com.example.autocare.telas.TelaAjudaSuporte
+import com.example.autocare.telas.TelaConfiguracoes
+import com.example.autocare.telas.TelaEditarMedicamento
+import com.example.autocare.telas.TelaFavoritos
+import com.example.autocare.receitas.telas.TelaReceitas
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val medicamentoViewModel: MedicamentoViewModel = viewModel()
-            AutoCareTheme(darkTheme = medicamentoViewModel.darkModeEnabled) {
+            val isDarkMode by medicamentoViewModel.darkModeEnabled.collectAsState()
+            AutoCareTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -97,39 +107,52 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
     Scaffold(
         snackbarHost = { SnackbarHost(remember { SnackbarHostState() }) },
         topBar = {
-            when (currentRoute) {
-                "home" -> MedicineTopAppBar(
-                    appName = "AutoCare",
-                    onFavoriteClick = { navController.navigate("favorites_route") },
-                    onSettingsClick = { navController.navigate("settings_route") },
-                    onHelpClick = { navController.navigate("help_route") }
-                )
-                currentRoute -> if (currentRoute?.startsWith("details") == true) {
+            when {
+                currentRoute == "home" -> {
+                    MedicineTopAppBar(
+                        appName = "AutoCare",
+                        onFavoriteClick = { navController.navigate("favorites_route") },
+                        onSettingsClick = { navController.navigate("settings_route") },
+                        onHelpClick = { navController.navigate("help_route") }
+                    )
+                }
+                currentRoute?.startsWith("details") == true -> {
                     DetailsTopAppBar(
                         title = "Detalhes do Medicamento",
                         onBackClick = { navController.popBackStack() }
                     )
-                } else if (currentRoute == "favorites_route") {
+                }
+                currentRoute?.startsWith("receita_details") == true -> {
+                    DetailsTopAppBar(
+                        title = "Detalhes da Receita",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+                currentRoute == "favorites_route" -> {
                     DetailsTopAppBar(
                         title = "Meus Favoritos",
                         onBackClick = { navController.popBackStack() }
                     )
-                } else if (currentRoute == "settings_route") {
+                }
+                currentRoute == "settings_route" -> {
                     DetailsTopAppBar(
                         title = "Configurações",
                         onBackClick = { navController.popBackStack() }
                     )
-                } else if (currentRoute == "help_route") {
+                }
+                currentRoute == "help_route" -> {
                     DetailsTopAppBar(
                         title = "Ajuda e Suporte",
                         onBackClick = { navController.popBackStack() }
                     )
-                } else if (currentRoute == "add_medicamento_route") {
+                }
+                currentRoute == "add_medicamento_route" -> {
                     DetailsTopAppBar(
                         title = "Adicionar Medicamento",
                         onBackClick = { navController.popBackStack() }
                     )
-                } else if (currentRoute?.startsWith("edit_medicamento_route") == true) {
+                }
+                currentRoute?.startsWith("edit_medicamento_route") == true -> {
                     DetailsTopAppBar(
                         title = "Editar Medicamento",
                         onBackClick = { navController.popBackStack() }
@@ -138,7 +161,7 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
             }
         },
         bottomBar = {
-            if (currentRoute == "home") {
+            if (currentRoute == "home" || currentRoute == "calendar_route" || currentRoute == "receitas_route" || currentRoute == "profile_route") {
                 MedicineBottomNavigation(navController)
             }
         },
@@ -165,7 +188,6 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
                     onMedicamentoClick = { medicamentoId ->
                         navController.navigate("details/$medicamentoId")
                     },
-                    // A chamada aqui já está correta!
                     onRemoveMedicamentoClick = { medicamentoId ->
                         medicamentoViewModel.removeMedicamento(medicamentoId)
                     }
@@ -195,7 +217,11 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
             composable("favorites_route") {
                 TelaFavoritos(
                     medicamentosFavoritos = medicamentoViewModel.favoriteMedicamentos,
-                    onRemoveFavoriteClick = { medicamento -> medicamentoViewModel.removeFavorite(medicamento) },
+                    onRemoveFavoriteClick = { medicamento ->
+                        medicamentoViewModel.removeFavorite(
+                            medicamento
+                        )
+                    },
                     onMedicamentoClick = { medicamentoId -> navController.navigate("details/$medicamentoId") }
                 )
             }
@@ -232,8 +258,32 @@ fun AppNavigation(medicamentoViewModel: MedicamentoViewModel) {
                 }
             }
 
-            composable("calendar_route") { Text("Tela de Calendário", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
-            composable("reminders_route") { Text("Tela de Receitas", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
+            composable("calendar_route") {
+                Text("Tela de Calendário", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
+            }
+            composable("receitas_route") {
+                TelaReceitas(
+                    receitas = medicamentoViewModel.receitas,
+                    onReceitaClick = { receitaId ->
+                        navController.navigate("receita_details/$receitaId")
+                    }
+                )
+            }
+            composable(
+                route = "receita_details/{receitaId}",
+                arguments = listOf(navArgument("receitaId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val receitaId = backStackEntry.arguments?.getString("receitaId")
+                val receita = receitaId?.let { medicamentoViewModel.getReceitaById(it) }
+
+                if (receita != null) {
+                    TelaDetalhesReceita(receita = receita)
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Receita não encontrada!")
+                    }
+                }
+            }
             composable("profile_route") { Text("Tela de Perfil", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
         }
     }
@@ -298,7 +348,7 @@ fun MedicineBottomNavigation(navController: NavController) {
     NavigationBar {
         val items = listOf("Início", "Calendário", "Receitas", "Perfil")
         val icons = listOf(Icons.Default.Home, Icons.Default.CalendarToday, Icons.Default.AssignmentTurnedIn, Icons.Default.Help)
-        val routes = listOf("home", "calendar_route", "reminders_route", "profile_route")
+        val routes = listOf("home", "calendar_route", "receitas_route", "profile_route")
 
         items.forEachIndexed { index, item ->
             NavigationBarItem(
@@ -319,7 +369,6 @@ fun MedicineBottomNavigation(navController: NavController) {
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaInicial(

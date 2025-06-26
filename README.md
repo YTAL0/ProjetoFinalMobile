@@ -48,3 +48,5 @@
 * * Exluir medicamentos (Ainda sem persistência de dados)
 * * Criar medicamentos (Ainda sem persistência de dados)
 * * Agora o aplicativo notifica na hora de tomar os medicamentos.
+* * As prefrerência de tema escuro, e notificações do usuário agora ficam salvas
+* * Nova tela de receitas com possibilidade de vizualizar detalhes(Ainda apenas com dados moackados)

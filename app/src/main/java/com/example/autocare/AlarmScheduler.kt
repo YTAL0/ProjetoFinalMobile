@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.example.autocare.medicamento.Medicamento
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar

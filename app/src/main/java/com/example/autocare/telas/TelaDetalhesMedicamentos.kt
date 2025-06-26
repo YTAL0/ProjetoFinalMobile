@@ -1,4 +1,4 @@
-package com.example.autocare.com.example.autocare.telas
+package com.example.autocare.telas
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -35,11 +35,11 @@ import coil.compose.AsyncImage
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.ui.text.style.TextAlign
-import com.example.autocare.Frequencia
-import com.example.autocare.Medicamento
+import com.example.autocare.medicamento.Frequencia
+import com.example.autocare.medicamento.Medicamento
 import com.example.autocare.R
-import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
-import com.example.autocare.getSampleMedicamentos
+import com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.medicamento.getSampleMedicamentos
 import com.example.autocare.ui.theme.AutoCareTheme
 
 @Composable

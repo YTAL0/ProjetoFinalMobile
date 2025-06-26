@@ -1,16 +1,18 @@
-package com.example.autocare
+package com.example.autocare.telas
 
 import android.annotation.SuppressLint
 import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -18,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.autocare.com.example.autocare.medicamento.MedicamentoViewModel
+import com.example.autocare.medicamento.MedicamentoViewModel
 import com.example.autocare.ui.theme.AutoCareTheme
 
 @Composable
@@ -27,6 +29,8 @@ fun TelaConfiguracoes(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isDarkModeOn by medicamentoViewModel.darkModeEnabled.collectAsState()
+    val areNotificationsOn by medicamentoViewModel.notificationsEnabled.collectAsState()
 
     Column(
         modifier = modifier
@@ -42,7 +46,6 @@ fun TelaConfiguracoes(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -50,7 +53,6 @@ fun TelaConfiguracoes(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = "Preferências", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
-
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -63,12 +65,8 @@ fun TelaConfiguracoes(
                         Text(text = "Modo Escuro", fontSize = 16.sp)
                     }
                     Switch(
-                        checked = medicamentoViewModel.darkModeEnabled,
-                        onCheckedChange = {
-                            medicamentoViewModel.toggleDarkMode()
-                            Toast.makeText(context, "Modo Escuro: ${if (medicamentoViewModel.darkModeEnabled) "Ativado" else "Desativado"}", Toast.LENGTH_SHORT).show()
-
-                        }
+                        checked = isDarkModeOn,
+                        onCheckedChange = { medicamentoViewModel.toggleDarkMode() }
                     )
                 }
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -84,12 +82,8 @@ fun TelaConfiguracoes(
                         Text(text = "Receber Notificações", fontSize = 16.sp)
                     }
                     Switch(
-                        checked = medicamentoViewModel.notificationsEnabled,
-                        onCheckedChange = {
-                            medicamentoViewModel.toggleNotifications()
-                            Toast.makeText(context, "Notificações: ${if (medicamentoViewModel.notificationsEnabled) "Ativadas" else "Desativadas"}", Toast.LENGTH_SHORT).show()
-
-                        }
+                        checked = areNotificationsOn,
+                        onCheckedChange = { medicamentoViewModel.toggleNotifications() }
                     )
                 }
             }
@@ -102,7 +96,6 @@ fun TelaConfiguracoes(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = "Ações", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
-
 
                 Button(
                     onClick = {
