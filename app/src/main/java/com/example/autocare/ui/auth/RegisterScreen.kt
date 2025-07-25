@@ -135,9 +135,6 @@ fun RegisterScreen(viewModel: AuthViewModel, navController: NavController) {
                         isLoading = false
                         if (success) {
                             Toast.makeText(context, "Cadastro realizado com sucesso!", Toast.LENGTH_SHORT).show()
-                            navController.navigate("login_route") {
-                                popUpTo("login_route") { inclusive = true }
-                            }
                         } else {
                             Toast.makeText(context, "Erro no cadastro. Verifique os dados e tente novamente.", Toast.LENGTH_LONG).show()
                         }
