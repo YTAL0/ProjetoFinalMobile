@@ -1,52 +1,68 @@
-* AutoCare
+# AutoCare
 
-* * Este é o aplicativo AutoCare, desenvolvido em Kotlin com Jetpack Compose, projetado para ajudar no controle e gerenciamento de seus medicamentos.
+**AutoCare** é um aplicativo desenvolvido em **Kotlin com Jetpack Compose**, projetado para ser um assistente completo no controle e gerenciamento de seus medicamentos e receitas médicas.
 
-* Funcionalidades Principais:
+---
 
-* Tela Inicial:
+## 🚀 Funcionalidades Principais
 
-* * Exibe uma lista de medicamentos.
+### 1. 🔐 Autenticação e Segurança de Dados
 
-* * Possui um campo de busca .
+- **Sistema de Login Completo:**
+  - Cadastro de novos usuários com nome, e-mail e senha.
+  - Login seguro para usuários existentes.
+  - Recuperação de senha por e-mail.
 
-* Detalhes do Medicamento:
+- **Dados Privados por Usuário:**
+  - Medicamentos e receitas são salvos individualmente por usuário no banco de dados, garantindo total privacidade.
 
-* * Ao clicar em um medicamento, visualize informações detalhadas.
+- **Gerenciamento de Sessão:**
+  - O app mantém a sessão ativa, abrindo direto na tela principal ao reabrir.
+  - Botão de logout disponível na tela de perfil para encerrar a sessão com segurança.
 
-* * Adicionar aos favoritos.
+---
 
-* * Áudios explicativos.
+### 2. 💊 Gerenciamento de Medicamentos (CRUD Completo)
 
-* Medicamentos Similares:
+- Adicionar, editar e excluir medicamentos com campos como nome, dosagem, frequência, etc.
+- **Favoritos Persistentes:**
+  - Usuário pode favoritar medicamentos e a preferência é salva no banco de dados.
+- **Notificações Inteligentes:**
+  - Lembretes automáticos na hora de tomar os medicamentos.
 
-* * Veja sugestões de outros medicamentos relacionados na tela de detalhes.
+---
 
-* Favoritos:
+### 3. 🧾 Gerenciamento de Receitas (CRUD Completo)
 
-* * Gerencie sua lista de medicamentos favoritos.
+- Sistema completo para adicionar, visualizar, editar e excluir receitas médicas.
+- **Barra de Pesquisa:**
+  - Permite encontrar facilmente uma receita pelo nome do medicamento.
 
-* * Permite adicionar ou remover itens .
+---
 
-* Configurações:
+### 4. 🧠 Funcionalidades Avançadas e Experiência do Usuário
 
-* * Opções como Modo Escuro .
+- **Upload de Mídia:**
+  - Upload de **imagens** (para medicamentos e receitas).
+  - Upload de **áudios explicativos** (para medicamentos).
+  - Arquivos armazenados de forma segura no **Firebase Storage**.
 
-* * Ações para limpar dados.
+- **Modo Offline + Sincronização Automática:**
+  - Funciona sem internet, com sincronização automática ao reconectar.
 
-* Ajuda e Suporte:
+- **Agenda de Medicamentos (Calendário):**
+  - Calendário mensal destacando dias com medicamentos agendados.
+  - Visualização detalhada dos medicamentos e horários do dia selecionado.
 
-* * Acesse uma seção de Perguntas Frequentes (FAQs).
+- **Configurações e Personalização:**
+  - Modo claro/escuro com persistência de tema.
+  - Opções para limpar favoritos e redefinir preferências do app.
 
-* * Botão para simular o envio de mensagens de suporte.
+- **Ajuda e Suporte:**
+  - Seção de **Perguntas Frequentes (FAQs)**.
+  - Tela para simular o envio de mensagens ao suporte.
 
-# Entrega 3
 
-* Novas funcionalidades
 
-* * Editar medicamentos (Ainda sem persistência de dados)
-* * Exluir medicamentos (Ainda sem persistência de dados)
-* * Criar medicamentos (Ainda sem persistência de dados)
-* * Agora o aplicativo notifica na hora de tomar os medicamentos.
-* * As prefrerência de tema escuro, e notificações do usuário agora ficam salvas
-* * Nova tela de receitas com possibilidade de vizualizar detalhes(Ainda apenas com dados moackados)
+
+
