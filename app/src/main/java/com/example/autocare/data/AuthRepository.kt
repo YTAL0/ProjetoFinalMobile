@@ -1,8 +1,14 @@
 package com.example.autocare.data
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.example.autocare.R
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
@@ -15,18 +21,50 @@ class AuthRepository {
     private val storage: FirebaseStorage = FirebaseStorage.getInstance()
     private val TAG = "AuthRepository"
 
+    fun getGoogleSignInClient(context: Context): GoogleSignInClient {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        return GoogleSignIn.getClient(context, gso)
+    }
+
+    suspend fun loginWithGoogle(idToken: String): Boolean {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = auth.signInWithCredential(credential).await()
+            val user = result.user
+
+            user?.let {
+                val uid = it.uid
+                val userRef = firestore.collection("usuarios").document(uid)
+                val snapshot = userRef.get().await()
+
+                if (!snapshot.exists()) {
+                    val userData = hashMapOf(
+                        "uid" to uid,
+                        "name" to it.displayName,
+                        "email" to it.email,
+                        "createdAt" to System.currentTimeMillis()
+                    )
+                    userRef.set(userData).await()
+                    Log.d(TAG, "Novo usuário do Google salvo no Firestore: $uid")
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro no login com Google: ${e.message}", e)
+            false
+        }
+    }
+
     suspend fun uploadFileAndGetUrl(fileUri: Uri, folder: String): String? {
         val userId = getCurrentUserId() ?: return null
         return try {
             val fileName = UUID.randomUUID().toString()
-
             val storageRef = storage.reference.child("$folder/$userId/$fileName")
-
             storageRef.putFile(fileUri).await()
-            Log.d(TAG, "Upload do arquivo bem-sucedido: ${storageRef.path}")
-
             val downloadUrl = storageRef.downloadUrl.await().toString()
-            Log.d(TAG, "URL de download obtida: $downloadUrl")
             downloadUrl
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao fazer upload do arquivo: ${e.message}", e)
@@ -38,7 +76,6 @@ class AuthRepository {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user?.uid
-
             if (uid != null) {
                 val user = hashMapOf(
                     "uid" to uid,
@@ -47,7 +84,6 @@ class AuthRepository {
                     "createdAt" to System.currentTimeMillis()
                 )
                 firestore.collection("usuarios").document(uid).set(user).await()
-                Log.d(TAG, "Usuário registrado com sucesso: $uid")
             }
             true
         } catch (e: Exception) {
@@ -59,7 +95,6 @@ class AuthRepository {
     suspend fun loginUser(email: String, password: String): Boolean {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
-            Log.d(TAG, "Login bem-sucedido para o e-mail: $email")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Erro no login: ${e.message}")
@@ -70,7 +105,6 @@ class AuthRepository {
     suspend fun resetPassword(email: String): Boolean {
         return try {
             auth.sendPasswordResetEmail(email).await()
-            Log.d(TAG, "E-mail de redefinição de senha enviado para: $email")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao enviar e-mail de recuperação: ${e.message}")
@@ -78,10 +112,8 @@ class AuthRepository {
         }
     }
 
-
     fun logout() {
         auth.signOut()
-        Log.d(TAG, "Usuário deslogado.")
     }
 
     fun isUserLogged(): Boolean {
