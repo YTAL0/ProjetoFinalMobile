@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "109231965513",
+    "project_id": "autocare-e4c2b",
+    "storage_bucket": "autocare-e4c2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109231965513:android:4237b6a0bf5f6823190698",
+        "android_client_info": {
+          "package_name": "com.example.autocare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "109231965513-m27ggl0sutejq1vfp06mq9fseir064r2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.autocare",
+            "certificate_hash": "fbcc6ef2441ece83a64ecb14e2a548d75f252f95"
+          }
+        },
+        {
+          "client_id": "109231965513-uk1mdv9rstphv18ng7m9bser0hb75qhb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGs1e99l5OteU7CaM5jZsMdTsLB6exU0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "109231965513-uk1mdv9rstphv18ng7m9bser0hb75qhb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

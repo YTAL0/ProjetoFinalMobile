@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -42,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,13 +53,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.autocare.data.AuthRepository
 import com.example.autocare.medicamento.Frequencia
 import com.example.autocare.medicamento.Medicamento
 import com.example.autocare.medicamento.MedicamentoViewModel
 import com.example.autocare.ui.theme.AutoCareTheme
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +73,8 @@ fun TelaAdicionarMedicamento(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val repository = remember { AuthRepository() }
 
     var nome by remember { mutableStateOf("") }
     var descricaoCurta by remember { mutableStateOf("") }
@@ -78,9 +84,11 @@ fun TelaAdicionarMedicamento(
     var selectedAudioUri by remember { mutableStateOf<Uri?>(null) }
     val intervaloOptions = (1..24).map { "A cada $it hora(s)" }
     var selectedIntervalText by remember { mutableStateOf("") }
-    var intervaloHoras by remember { mutableStateOf("") }
+    var intervaloHoras by remember { mutableStateOf(0) }
     var isIntervaloExpanded by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+
     val calendar = Calendar.getInstance()
     val timePickerState = rememberTimePickerState(
         initialHour = calendar.get(Calendar.HOUR_OF_DAY),
@@ -144,7 +152,7 @@ fun TelaAdicionarMedicamento(
                         text = { Text(text) },
                         onClick = {
                             selectedIntervalText = text
-                            intervaloHoras = (index + 1).toString()
+                            intervaloHoras = (index + 1)
                             isIntervaloExpanded = false
                         }
                     )
@@ -181,8 +189,7 @@ fun TelaAdicionarMedicamento(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            val selectedLocalTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                            primeiraHora = selectedLocalTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+                            primeiraHora = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
                             showTimePicker = false
                         }
                     ) { Text("OK") }
@@ -236,37 +243,52 @@ fun TelaAdicionarMedicamento(
 
         Button(
             onClick = {
-                val parsedIntervaloHoras = intervaloHoras.toIntOrNull()
                 if (nome.isBlank() || descricaoCurta.isBlank() || dosagem.isBlank() ||
-                    selectedIntervalText.isBlank() ||
-                    primeiraHora.isBlank()
+                    intervaloHoras <= 0 || primeiraHora.isBlank()
                 ) {
                     Toast.makeText(context, "Por favor, preencha todos os campos.", Toast.LENGTH_LONG).show()
                 } else {
-                    val newMedicamento = Medicamento(
-                        id = UUID.randomUUID().toString(),
-                        nome = nome,
-                        descricaoCurta = descricaoCurta,
-                        dosagem = dosagem,
-                        frequencia = Frequencia(parsedIntervaloHoras!!, primeiraHora),
-                        imageResId = 0,
-                        imageUrl = selectedImageUri?.toString(),
-                        audioResId = null,
-                        audioUrl = selectedAudioUri?.toString()
-                    )
+                    isLoading = true
+                    scope.launch {
+                        val imageUrl = selectedImageUri?.let { repository.uploadFileAndGetUrl(it, "images") }
+                        val audioUrl = selectedAudioUri?.let { repository.uploadFileAndGetUrl(it, "audio") }
 
-                    medicamentoViewModel.addMedicamento(newMedicamento)
-                    Toast.makeText(context, "Medicamento '${nome}' adicionado!", Toast.LENGTH_SHORT).show()
-                    onMedicamentoAdded()
+                        val newMedicamento = Medicamento(
+                            id = UUID.randomUUID().toString(),
+                            nome = nome,
+                            descricaoCurta = descricaoCurta,
+                            dosagem = dosagem,
+                            frequencia = Frequencia(intervaloHoras, primeiraHora),
+                            imageUrl = imageUrl,
+                            audioUrl = audioUrl
+                        )
+
+                        medicamentoViewModel.addMedicamento(newMedicamento)
+
+
+                        launch(kotlinx.coroutines.Dispatchers.Main) {
+                            isLoading = false
+                            Toast.makeText(context, "Medicamento '${nome}' adicionado!", Toast.LENGTH_SHORT).show()
+                            onMedicamentoAdded()
+                        }
+                    }
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(56.dp),
+            enabled = !isLoading
         ) {
-            Icon(Icons.Default.Save, contentDescription = "Salvar Medicamento")
-            Spacer(Modifier.width(8.dp))
-            Text("Salvar Medicamento")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Icon(Icons.Default.Save, contentDescription = "Salvar Medicamento")
+                Spacer(Modifier.width(8.dp))
+                Text("Salvar Medicamento")
+            }
         }
     }
 }

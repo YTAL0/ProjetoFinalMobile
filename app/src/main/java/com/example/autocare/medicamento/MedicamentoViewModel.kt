@@ -1,45 +1,49 @@
 package com.example.autocare.medicamento
 
 import android.app.Application
-import androidx.compose.runtime.mutableStateListOf
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.autocare.AlarmScheduler
 import com.example.autocare.DataStore
+import com.example.autocare.data.FirebaseClient
 import com.example.autocare.receitas.ReceitaMedica
-import com.example.autocare.receitas.getSampleReceitasMedicas
+import com.example.autocare.telas.Agendamento
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
-// Corrigido o nome da classe para corresponder ao que usamos nos outros arquivos
 class MedicamentoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val scheduler = AlarmScheduler(application)
-    // CORRIGIDO: O nome da classe é SettingsDataStore
     private val dataStore = DataStore(application)
+    private val db: FirebaseFirestore = FirebaseClient.firestore
+    private val auth: FirebaseAuth = FirebaseClient.auth
+    private val TAG = "AutoCareDebug"
 
-    // --- Seção de Medicamentos ---
-    private val _medicamentos = mutableStateListOf<Medicamento>().apply {
-        addAll(getSampleMedicamentos())
-    }
-    val medicamentos: List<Medicamento> = _medicamentos
+    private var medicamentosCollection: CollectionReference? = null
+    private var receitasCollection: CollectionReference? = null
 
-    private val _favoriteMedicamentos = mutableStateListOf<Medicamento>()
-    val favoriteMedicamentos: List<Medicamento> = _favoriteMedicamentos
+    private val _medicamentos = MutableStateFlow<List<Medicamento>>(emptyList())
+    val medicamentos: StateFlow<List<Medicamento>> = _medicamentos.asStateFlow()
 
-    // --- NOVO: Seção de Receitas ---
-    private val _receitas = mutableStateListOf<ReceitaMedica>().apply {
-        addAll(getSampleReceitasMedicas())
-    }
-    val receitas: List<ReceitaMedica> = _receitas
-    // --- FIM DA SEÇÃO DE RECEITAS ---
+    val favoriteMedicamentos: StateFlow<List<Medicamento>> = _medicamentos.map { meds ->
+        meds.filter { it.favorito }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun getReceitaById(id: String): ReceitaMedica? {
-        return _receitas.find { it.id == id }
-    }
-    // --- Seção de Preferências ---
+    private val _receitas = MutableStateFlow<List<ReceitaMedica>>(emptyList())
+    val receitas: StateFlow<List<ReceitaMedica>> = _receitas.asStateFlow()
+
     val darkModeEnabled: StateFlow<Boolean> = dataStore.darkModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -48,40 +52,134 @@ class MedicamentoViewModel(application: Application) : AndroidViewModel(applicat
 
 
     init {
-        if (notificationsEnabled.value) {
-            _medicamentos.forEach { scheduler.schedule(it) }
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            if (user != null) {
+                setupListenersForUser(user.uid)
+            } else {
+                _medicamentos.value = emptyList()
+                _receitas.value = emptyList()
+                medicamentosCollection = null
+                receitasCollection = null
+            }
         }
     }
 
-    // O resto do seu arquivo continua igual, pois as funções de receita (add, remove)
-    // ainda não são necessárias para esta primeira versão.
+    private fun setupListenersForUser(userId: String) {
+        medicamentosCollection = db.collection("usuarios").document(userId).collection("medicamentos")
+        receitasCollection = db.collection("usuarios").document(userId).collection("receitas")
+
+        medicamentosCollection?.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.e(TAG, "Listen de medicamentos falhou.", e)
+                return@addSnapshotListener
+            }
+            snapshot?.let { querySnapshot ->
+                val medList = querySnapshot.documents.mapNotNull { document ->
+                    document.toObject(Medicamento::class.java)?.copy(id = document.id)
+                }
+                _medicamentos.value = medList
+            }
+        }
+
+        receitasCollection?.addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.e(TAG, "Listen de receitas falhou.", e)
+                return@addSnapshotListener
+            }
+            snapshot?.let { querySnapshot ->
+                val receitaList = querySnapshot.documents.mapNotNull { document ->
+                    document.toObject(ReceitaMedica::class.java)?.copy(id = document.id)
+                }
+                _receitas.value = receitaList
+            }
+        }
+    }
+
+
+    fun getAgendamentosParaDia(dataSelecionada: LocalDate, todosMedicamentos: List<Medicamento>): List<Agendamento> {
+        val agendamentos = mutableListOf<Agendamento>()
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+        for (medicamento in todosMedicamentos) {
+
+            if (medicamento.frequencia.primeiraHora.isBlank() || medicamento.frequencia.intervaloHoras <= 0) {
+                continue
+            }
+
+            try {
+                val primeiraHora = LocalTime.parse(medicamento.frequencia.primeiraHora, timeFormatter)
+                val intervalo = medicamento.frequencia.intervaloHoras
+
+                val dosesNoDia = 24 / intervalo
+
+                for (i in 0 until dosesNoDia) {
+                    val horaDaDose = primeiraHora.plusHours(intervalo.toLong() * i)
+                    agendamentos.add(
+                        Agendamento(
+                            nomeMedicamento = medicamento.nome,
+                            horario = horaDaDose.format(timeFormatter)
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao calcular agendamento para ${medicamento.nome}: ${e.message}")
+            }
+        }
+        return agendamentos
+    }
+
+    fun addReceita(receita: ReceitaMedica) {
+        receitasCollection?.document(receita.id)?.set(receita)
+            ?.addOnFailureListener { e -> Log.e(TAG, "FALHA ao adicionar a receita.", e) }
+    }
+
+    fun updateReceita(updatedReceita: ReceitaMedica) {
+        receitasCollection?.document(updatedReceita.id)?.set(updatedReceita)
+            ?.addOnFailureListener { e -> Log.e(TAG, "FALHA ao atualizar a receita.", e) }
+    }
+
+    fun removeReceita(receitaId: String) {
+        receitasCollection?.document(receitaId)?.delete()
+            ?.addOnFailureListener { e -> Log.e(TAG, "FALHA ao remover a receita.", e) }
+    }
 
     fun addMedicamento(medicamento: Medicamento) {
-        _medicamentos.add(medicamento)
-        if (notificationsEnabled.value) {
-            scheduler.schedule(medicamento)
-        }
+        medicamentosCollection?.document(medicamento.id)?.set(medicamento)
+            ?.addOnSuccessListener {
+                if (notificationsEnabled.value) scheduler.schedule(medicamento)
+            }
     }
 
     fun updateMedicamento(updatedMedicamento: Medicamento) {
-        val index = _medicamentos.indexOfFirst { it.id == updatedMedicamento.id }
-        if (index != -1) {
-            _medicamentos[index] = updatedMedicamento
-            if (notificationsEnabled.value) {
-                scheduler.schedule(updatedMedicamento)
+        medicamentosCollection?.document(updatedMedicamento.id)?.set(updatedMedicamento)
+            ?.addOnSuccessListener {
+                if (notificationsEnabled.value) scheduler.schedule(updatedMedicamento)
             }
-            val favoriteIndex = _favoriteMedicamentos.indexOfFirst { it.id == updatedMedicamento.id }
-            if (favoriteIndex != -1) {
-                _favoriteMedicamentos[favoriteIndex] = updatedMedicamento
-            }
-        }
     }
 
     fun removeMedicamento(medicamentoId: String) {
-        val medicamento = _medicamentos.find { it.id == medicamentoId }
-        medicamento?.let { scheduler.cancel(it) }
-        _medicamentos.removeIf { it.id == medicamentoId }
-        _favoriteMedicamentos.removeIf { it.id == medicamentoId }
+        val medicamento = _medicamentos.value.find { it.id == medicamentoId }
+        medicamentosCollection?.document(medicamentoId)?.delete()
+            ?.addOnSuccessListener {
+                medicamento?.let { scheduler.cancel(it) }
+            }
+    }
+
+    fun addFavorite(medicamento: Medicamento) {
+        medicamentosCollection?.document(medicamento.id)?.update("favorito", true)
+    }
+
+    fun removeFavorite(medicamento: Medicamento) {
+        medicamentosCollection?.document(medicamento.id)?.update("favorito", false)
+    }
+
+    fun isFavorite(medicamento: Medicamento): Boolean {
+        return medicamento.favorito
+    }
+
+    fun getReceitaById(id: String): ReceitaMedica? {
+        return _receitas.value.find { it.id == id }
     }
 
     fun toggleDarkMode() {
@@ -94,11 +192,18 @@ class MedicamentoViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             val newState = !notificationsEnabled.value
             dataStore.toggleNotifications(newState)
-
             if (newState) {
-                _medicamentos.forEach { scheduler.schedule(it) }
+                _medicamentos.value.forEach { scheduler.schedule(it) }
             } else {
-                _medicamentos.forEach { scheduler.cancel(it) }
+                _medicamentos.value.forEach { scheduler.cancel(it) }
+            }
+        }
+    }
+
+    fun clearFavorites() {
+        viewModelScope.launch {
+            favoriteMedicamentos.value.forEach { med ->
+                removeFavorite(med)
             }
         }
     }
@@ -108,20 +213,5 @@ class MedicamentoViewModel(application: Application) : AndroidViewModel(applicat
             dataStore.toggleDarkMode(false)
             dataStore.toggleNotifications(true)
         }
-    }
-
-    fun addFavorite(medicamento: Medicamento) {
-        if (!_favoriteMedicamentos.any { it.id == medicamento.id }) {
-            _favoriteMedicamentos.add(medicamento)
-        }
-    }
-    fun removeFavorite(medicamento: Medicamento) {
-        _favoriteMedicamentos.removeIf { it.id == medicamento.id }
-    }
-    fun isFavorite(medicamento: Medicamento): Boolean {
-        return _favoriteMedicamentos.any { it.id == medicamento.id }
-    }
-    fun clearFavorites() {
-        _favoriteMedicamentos.clear()
     }
 }

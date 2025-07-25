@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,9 +57,9 @@ import com.example.autocare.medicamento.Frequencia
 import com.example.autocare.medicamento.Medicamento
 import com.example.autocare.medicamento.MedicamentoViewModel
 import com.example.autocare.ui.theme.AutoCareTheme
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,13 +71,15 @@ fun TelaEditarMedicamento(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-
-    val originalMedicamento = remember(medicamentoId) {
-        medicamentoViewModel.medicamentos.find { it.id == medicamentoId }
+    val medicamentos by medicamentoViewModel.medicamentos.collectAsState()
+    val originalMedicamento = remember(medicamentoId, medicamentos) {
+        medicamentos.find { it.id == medicamentoId }
     }
 
     if (originalMedicamento == null) {
-        Text("Medicamento não encontrado para edição.", modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center))
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Carregando medicamento...")
+        }
         return
     }
 
@@ -88,15 +91,17 @@ fun TelaEditarMedicamento(
     var selectedAudioUri by remember { mutableStateOf<Uri?>(originalMedicamento.audioUrl?.let { Uri.parse(it) }) }
     var showTimePicker by remember { mutableStateOf(false) }
     val intervaloOptions = (1..24).map { "A cada $it hora(s)" }
-    var intervaloHoras by remember { mutableStateOf(originalMedicamento.frequencia.intervaloHoras.toString()) }
+    var intervaloHoras by remember { mutableStateOf(originalMedicamento.frequencia.intervaloHoras) }
     var selectedIntervalText by remember { mutableStateOf("A cada ${originalMedicamento.frequencia.intervaloHoras} hora(s)") }
     var isIntervaloExpanded by remember { mutableStateOf(false) }
 
 
     val (initialHour, initialMinute) = remember(originalMedicamento.frequencia.primeiraHora) {
         try {
-            val time = LocalTime.parse(originalMedicamento.frequencia.primeiraHora, DateTimeFormatter.ofPattern("HH:mm"))
-            time.hour to time.minute
+            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val cal = Calendar.getInstance()
+            cal.time = sdf.parse(originalMedicamento.frequencia.primeiraHora) ?: Calendar.getInstance().time
+            cal.get(Calendar.HOUR_OF_DAY) to cal.get(Calendar.MINUTE)
         } catch (e: Exception) {
             val calendar = Calendar.getInstance()
             calendar.get(Calendar.HOUR_OF_DAY) to calendar.get(Calendar.MINUTE)
@@ -165,7 +170,7 @@ fun TelaEditarMedicamento(
                         text = { Text(text) },
                         onClick = {
                             selectedIntervalText = text
-                            intervaloHoras = (index + 1).toString()
+                            intervaloHoras = (index + 1)
                             isIntervaloExpanded = false
                         }
                     )
@@ -202,8 +207,7 @@ fun TelaEditarMedicamento(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            val selectedLocalTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                            primeiraHora = selectedLocalTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+                            primeiraHora = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
                             showTimePicker = false
                         }
                     ) { Text("OK") }
@@ -250,22 +254,14 @@ fun TelaEditarMedicamento(
             Spacer(modifier = Modifier.height(8.dp))
             Text("Áudio selecionado: ${it.lastPathSegment ?: "Arquivo de áudio"}", color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
-        } ?: run {
-            originalMedicamento.audioResId?.let { resId ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Áudio atual: ${context.resources.getResourceEntryName(resId)}", color = Color.Gray)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                val parsedIntervaloHoras = intervaloHoras.toIntOrNull()
                 if (nome.isBlank() || descricaoCurta.isBlank() || dosagem.isBlank() ||
-                    parsedIntervaloHoras == null || parsedIntervaloHoras <= 0 ||
-                    primeiraHora.isBlank()
+                    intervaloHoras <= 0 || primeiraHora.isBlank()
                 ) {
                     Toast.makeText(context, "Por favor, preencha todos os campos corretamente.", Toast.LENGTH_LONG).show()
                 } else {
@@ -273,10 +269,8 @@ fun TelaEditarMedicamento(
                         nome = nome,
                         descricaoCurta = descricaoCurta,
                         dosagem = dosagem,
-                        frequencia = Frequencia(parsedIntervaloHoras, primeiraHora),
-                        imageResId = 0,
+                        frequencia = Frequencia(intervaloHoras, primeiraHora),
                         imageUrl = selectedImageUri?.toString(),
-                        audioResId = null,
                         audioUrl = selectedAudioUri?.toString()
                     )
 
@@ -300,9 +294,9 @@ fun TelaEditarMedicamento(
 @Preview(showBackground = true, widthDp = 360)
 @Composable
 fun TelaEditarMedicamentoPreview() {
-    val mockViewModel = MedicamentoViewModel(LocalContext.current.applicationContext as Application)
-    mockViewModel.addMedicamento(
-        Medicamento(
+
+    AutoCareTheme {
+        val mockMedicamento = Medicamento(
             id = "dummy_id",
             nome = "Ibuprofeno",
             descricaoCurta = "Anti-inflamatório para alívio de dores.",
@@ -311,8 +305,8 @@ fun TelaEditarMedicamentoPreview() {
             imageUrl = null,
             audioUrl = null
         )
-    )
-    AutoCareTheme {
+        val mockViewModel = MedicamentoViewModel(LocalContext.current.applicationContext as Application)
+
         TelaEditarMedicamento(
             medicamentoId = "dummy_id",
             medicamentoViewModel = mockViewModel,

@@ -57,8 +57,8 @@ fun TelaFavoritos(
             items(medicamentosFavoritos) { medicamento ->
                 FavoriteMedicamentoCard(
                     medicamento = medicamento,
-                    onRemoveClick = { onRemoveFavoriteClick(it) },
-                    onItemClick = { onMedicamentoClick(it) }
+                    onRemoveClick = onRemoveFavoriteClick,
+                    onItemClick = onMedicamentoClick
                 )
             }
         }
@@ -100,24 +100,27 @@ fun FavoriteMedicamentoCard(
                         error = painterResource(id = R.drawable.ic_launcher_foreground),
                         placeholder = painterResource(id = R.drawable.ic_launcher_foreground)
                     )
-                } else if (medicamento.imageResId != 0) {
-                    Image(
-                        painter = painterResource(id = medicamento.imageResId),
-                        contentDescription = "Imagem de ${medicamento.nome}",
-                        modifier = Modifier
-                            .size(64.dp)
-                            .padding(end = 16.dp),
-                        contentScale = ContentScale.Crop
-                    )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .padding(end = 16.dp)
-                            .background(Color.LightGray, shape = MaterialTheme.shapes.small),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Sem Imagem", fontSize = 10.sp, textAlign = TextAlign.Center)
+                    val localImageResId = medicamento.imageResId
+                    if (localImageResId != null && localImageResId != 0) {
+                        Image(
+                            painter = painterResource(id = localImageResId),
+                            contentDescription = "Imagem de ${medicamento.nome}",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .padding(end = 16.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .padding(end = 16.dp)
+                                .background(Color.LightGray, shape = MaterialTheme.shapes.small),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Sem Imagem", fontSize = 10.sp, textAlign = TextAlign.Center)
+                        }
                     }
                 }
 

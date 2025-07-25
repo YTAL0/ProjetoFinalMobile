@@ -152,7 +152,7 @@ fun FAQCard(faq: FAQItem) {
                 Text(
                     text = faq.answer,
                     fontSize = 14.sp,
-                    color = Color.DarkGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
